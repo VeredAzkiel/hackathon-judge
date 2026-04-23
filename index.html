@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hackathon GitHub Copilot SSL LABS ISR AI🏆</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="header-brand">
+            <span class="header-icon">🏆</span>
+            <div>
+                <h1>Hackathon GitHub Copilot SSL LABS ISR AI🏆</h1>
+                <p>דרג פרויקטים לפי קריטריונים מקצועיים</p>
+            </div>
+        </div>
+        <nav class="app-nav">
+            <button class="nav-btn active" data-view="leaderboard">🏅 לוח תוצאות</button>
+            <button class="nav-btn" data-view="projects">📋 ניהול פרויקטים</button>
+            <button class="nav-btn" data-view="scoring">⭐ ניקוד</button>
+            <button class="nav-btn" data-view="judges">👨‍⚖️ שופטים</button>
+        </nav>
+    </header>
+
+    <main class="app-main">
+
+        <!-- Leaderboard View -->
+        <div id="view-leaderboard" class="view active">
+            <div class="view-header">
+                <h2>🏅 לוח תוצאות</h2>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <div class="stats-bar" id="stats-bar"></div>
+                    <button class="btn btn-primary" id="btn-podium">🥇 פודיום</button>
+                </div>
+            </div>
+            <div id="leaderboard-content"></div>
+        </div>
+
+    <!-- Podium Modal -->
+    <div id="podium-modal" class="modal-overlay" hidden>
+        <div class="modal modal-podium" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <h3>🏆 פודיום – 3 המקומות הראשונים</h3>
+                <button class="modal-close" id="podium-close-btn" aria-label="סגור">✕</button>
+            </div>
+            <div class="modal-body" id="podium-body"></div>
+        </div>
+    </div>
+
+        <!-- Projects Management View -->
+        <div id="view-projects" class="view">
+            <div class="view-header">
+                <h2>📋 ניהול פרויקטים</h2>
+                <button class="btn btn-primary" id="btn-add-project">+ הוסף פרויקט</button>
+            </div>
+            <div id="projects-list"></div>
+        </div>
+
+        <!-- Scoring View -->
+        <div id="view-scoring" class="view">
+            <div class="view-header">
+                <h2>⭐ ניקוד פרויקט</h2>
+            </div>
+            <div id="scoring-content">
+                <div class="project-selector-wrapper">
+                    <label for="project-select">בחר פרויקט לניקוד:</label>
+                    <select id="project-select">
+                        <option value="">-- בחר פרויקט --</option>
+                    </select>
+                </div>
+                <div id="scoring-form"></div>
+            </div>
+        </div>
+
+        <!-- Judges View -->
+        <div id="view-judges" class="view">
+            <div class="view-header">
+                <h2>👨‍⚖️ ניהול שופטים</h2>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-secondary" id="btn-download-template">📥 הורד תבנית CSV</button>
+                    <label class="btn btn-primary" for="csv-upload" style="cursor:pointer;">📤 העלה ציוני שופט</label>
+                    <input type="file" id="csv-upload" accept=".csv,.txt" style="display:none">
+                </div>
+            </div>
+            <div id="judges-content"></div>
+        </div>
+
+    </main>
+
+    <!-- Add/Edit Project Modal -->
+    <div id="project-modal" class="modal-overlay" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <div class="modal-header">
+                <h3 id="modal-title">הוסף פרויקט</h3>
+                <button class="modal-close" id="modal-close-btn" aria-label="סגור">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="project-id">
+                <div class="form-group">
+                    <label for="project-name">שם הפרויקט *</label>
+                    <input type="text" id="project-name" placeholder="לדוגמה: SmartCity AI" maxlength="80">
+                </div>
+                <div class="form-group">
+                    <label for="project-team">שם המשתמש / שם הקבוצה *</label>
+                    <input type="text" id="project-team" placeholder="לדוגמה: Team Alpha" maxlength="60">
+                </div>
+                <div class="form-group">
+                    <label for="project-members">מספר משתתפים בקבוצה</label>
+                    <input type="number" id="project-members" placeholder="לדוגמה: 4" min="1" max="99">
+                </div>
+                <div class="form-group">
+                    <label for="project-desc">תיאור קצר</label>
+                    <textarea id="project-desc" placeholder="תיאור קצר של הפרויקט..." rows="3" maxlength="300"></textarea>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel-btn">ביטול</button>
+                <button class="btn btn-primary" id="modal-save-btn">שמור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div id="delete-modal" class="modal-overlay" hidden>
+        <div class="modal modal-small" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <h3>אישור מחיקה</h3>
+            </div>
+            <div class="modal-body">
+                <p>האם אתה בטוח שברצונך למחוק את הפרויקט "<strong id="delete-project-name"></strong>"?</p>
+                <p class="warning-text">פעולה זו תמחק גם את ציוני הפרויקט.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="delete-cancel-btn">ביטול</button>
+                <button class="btn btn-danger" id="delete-confirm-btn">מחק</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <canvas id="confetti-canvas" style="display:none;position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9998;"></canvas>
+</body>
+</html>
