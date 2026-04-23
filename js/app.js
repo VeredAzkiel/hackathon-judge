@@ -76,6 +76,23 @@ function load() {
     }
 }
 
+// Loads projects.json from the server if localStorage is empty (for GitHub Pages deployment)
+function loadRemoteProjects(callback) {
+    if (state.projects.length > 0) { callback(); return; }
+    fetch('data/projects.json')
+        .then(r => { if (!r.ok) throw new Error('no file'); return r.json(); })
+        .then(data => {
+            if (Array.isArray(data) && data.length > 0) {
+                // Load projects but clear scores so judges start fresh
+                state.projects = data.map(p => ({ ...p, scores: {}, createdAt: p.createdAt || new Date().toISOString() }));
+                save();
+                toast('✅ פרויקטים נטענו אוטומטית');
+            }
+            callback();
+        })
+        .catch(() => callback()); // file doesn't exist locally — fine
+}
+
 // ── Score helpers ────────────────────────────────────────────────
 
 /**
@@ -695,7 +712,26 @@ function closePodium() {
     document.getElementById('podium-modal').hidden = true;
 }
 
-// ── CSV helpers ───────────────────────────────────────────────────
+function exportProjectsJSON() {
+    if (state.projects.length === 0) {
+        toast('⚠️ אין פרויקטים לייצוא', 'err');
+        return;
+    }
+    // Export only project metadata — no scores
+    const data = state.projects.map(({ id, name, team, members, description, createdAt }) =>
+        ({ id, name, team, members, description, createdAt }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'projects.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    document.getElementById('export-hint').hidden = false;
+    toast('📤 projects.json הורד');
+}
+
+
 
 function parseCSV(text) {
     // Remove BOM
@@ -949,6 +985,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 });
 
 document.getElementById('btn-add-project').addEventListener('click', openAddProject);
+document.getElementById('btn-export-projects').addEventListener('click', exportProjectsJSON);
 document.getElementById('btn-podium').addEventListener('click', openPodium);
 document.getElementById('btn-download-template').addEventListener('click', downloadTemplate);
 
@@ -998,4 +1035,4 @@ document.getElementById('project-select').addEventListener('change', function() 
 // ── Init ─────────────────────────────────────────────────────────
 
 load();
-renderLeaderboard();
+loadRemoteProjects(renderLeaderboard);

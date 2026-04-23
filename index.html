@@ -53,7 +53,14 @@
         <div id="view-projects" class="view">
             <div class="view-header">
                 <h2>📋 ניהול פרויקטים</h2>
-                <button class="btn btn-primary" id="btn-add-project">+ הוסף פרויקט</button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-secondary" id="btn-export-projects">📤 ייצא לשופטים</button>
+                    <button class="btn btn-primary" id="btn-add-project">+ הוסף פרויקט</button>
+                </div>
+            </div>
+            <div id="export-hint" class="export-hint" hidden>
+                <strong>✅ הקובץ <code>projects.json</code> הורד!</strong><br>
+                העלי אותו ל-GitHub בתיקייה <code>data/</code> ולחצי Commit — השופטים יראו את הפרויקטים אוטומטית.
             </div>
             <div id="projects-list"></div>
         </div>
