@@ -78,19 +78,27 @@ function load() {
 
 // Loads projects.json from the server if localStorage is empty (for GitHub Pages deployment)
 function loadRemoteProjects(callback) {
-    if (state.projects.length > 0) { callback(); return; }
     fetch('data/projects.json')
         .then(r => { if (!r.ok) throw new Error('no file'); return r.json(); })
         .then(data => {
             if (Array.isArray(data) && data.length > 0) {
-                // Load projects but clear scores so judges start fresh
-                state.projects = data.map(p => ({ ...p, scores: {}, createdAt: p.createdAt || new Date().toISOString() }));
-                save();
-                toast('✅ פרויקטים נטענו אוטומטית');
+                const existingIds = new Set(state.projects.map(p => p.id));
+                const newProjects = data
+                    .filter(p => !existingIds.has(p.id))
+                    .map(p => ({ ...p, scores: {}, createdAt: p.createdAt || new Date().toISOString() }));
+                if (newProjects.length > 0) {
+                    state.projects = [...state.projects, ...newProjects];
+                    save();
+                    toast(`✅ ${newProjects.length} פרויקטים חדשים נוספו`);
+                } else if (state.projects.length === 0) {
+                    state.projects = data.map(p => ({ ...p, scores: {}, createdAt: p.createdAt || new Date().toISOString() }));
+                    save();
+                    toast('✅ פרויקטים נטענו אוטומטית');
+                }
             }
             callback();
         })
-        .catch(() => callback()); // file doesn't exist locally — fine
+        .catch(() => callback());
 }
 
 // ── Score helpers ────────────────────────────────────────────────
