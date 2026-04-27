@@ -233,11 +233,14 @@ function renderLeaderboard() {
             return b._tot - a._tot;
         });
 
-    let scoredRank = 0;
+    let scoredRank = 0, prevScore = null;
     const items = ranked.map(p => {
-        const sc       = p._tot !== null;
-        if (sc) scoredRank++;
-        const rank     = sc ? scoredRank : null;
+        const sc = p._tot !== null;
+        let rank = null;
+        if (sc) {
+            if (p._tot !== prevScore) { scoredRank++; prevScore = p._tot; }
+            rank = scoredRank;
+        }
         const rankCls  = sc ? (rank <= 3 ? 'r' + rank : 'rN') : 'rN';
         const rankLbl  = !sc ? '—' : rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank;
 
@@ -626,11 +629,12 @@ function launchConfetti() {
 // ── Podium modal ─────────────────────────────────────────────────
 
 function buildScoreTable(p) {
-    if (!p.scores || Object.keys(p.scores).length === 0) {
+    const effScores = getAggregatedScores(p);
+    if (!effScores || Object.keys(effScores).length === 0) {
         return `<p class="podium-no-scores">טרם נוקד</p>`;
     }
     const rows = CATEGORIES.map(cat => {
-        const v = p.scores[cat.id];
+        const v = effScores[cat.id];
         if (v === undefined) return '';
         const bar = `<div class="pt-bar-wrap"><div class="pt-bar ${fillClass(v)}" style="width:${v * 10}%"></div></div>`;
         return `<tr>
@@ -644,13 +648,20 @@ function buildScoreTable(p) {
 }
 
 function openPodium() {
-    const scored = state.projects
+    const allScored = state.projects
         .map(p => ({ ...p, _tot: calcTotal(getAggregatedScores(p)) }))
         .filter(p => p._tot !== null)
-        .sort((a, b) => b._tot - a._tot)
-        .slice(0, 3);
+        .sort((a, b) => b._tot - a._tot);
 
-    const medals = ['🥇', '🥈', '🥉'];
+    // Assign dense ranks (ties get the same rank)
+    let denseRank = 0, prevTot = null;
+    allScored.forEach(p => {
+        if (p._tot !== prevTot) { denseRank++; prevTot = p._tot; }
+        p._rank = denseRank;
+    });
+    const scored = allScored.slice(0, 3);
+
+    const medalFor = r => r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '#' + r;
     const pClass = ['p1', 'p2', 'p3'];
     // Display order: 2nd left, 1st center, 3rd right
     const order  = [1, 0, 2];
@@ -671,7 +682,7 @@ function openPodium() {
         const label = idx + 1;
         return `<div class="podium-col ${cls}">
             <div class="podium-above">
-                ${p ? `<div class="podium-medal">${medals[idx]}</div>
+                ${p ? `<div class="podium-medal">${medalFor(p._rank)}</div>
                         <div class="podium-name">${esc(p.name)}</div>
                         <div class="podium-team">${esc(p.team)}</div>
                         <div class="podium-score ${scoreClass(p._tot)}">${p._tot.toFixed(1)}</div>`
@@ -689,7 +700,7 @@ function openPodium() {
         if (!p) return '';
         return `<div class="podium-detail-card ${pClass[idx]}">
             <div class="pdc-header">
-                <span class="pdc-medal">${medals[idx]}</span>
+                <span class="pdc-medal">${medalFor(p._rank)}</span>
                 <div>
                     <div class="pdc-name">${esc(p.name)}</div>
                     <div class="pdc-team">${esc(p.team)}</div>
