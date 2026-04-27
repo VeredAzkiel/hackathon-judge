@@ -773,109 +773,186 @@ function parseCSV(text) {
     });
 }
 
-function downloadTemplate() {
+async function downloadTemplate() {
     if (state.projects.length === 0) {
         toast('⚠️ אין פרויקטים — הוסף פרויקטים תחילה', 'err');
         return;
     }
-    const sep = ',';
-    const headers = [
-        'שם הפרויקט',
-        'שם הקבוצה',
-        'שם השופט',
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Hackathon Judge';
+    const ws = wb.addWorksheet('ניקוד שופטים', {
+        views: [{ state: 'frozen', xSplit: 0, ySplit: 1, rightToLeft: true }]
+    });
+
+    // Column widths
+    ws.columns = [
+        { key: 'name',  width: 34 },
+        { key: 'team',  width: 22 },
+        { key: 'judge', width: 24 },
+        ...CATEGORIES.map(c => ({ key: c.id, width: 20 }))
+    ];
+
+    // ── Header row ──
+    const hdr = ws.addRow([
+        'שם הפרויקט', 'שם הקבוצה', 'שם השופט',
         ...CATEGORIES.map(c => `${c.icon} ${c.name} (${c.weight}%)`)
-    ];
-    const rows = state.projects.map(p => [
-        p.name, p.team, '[הכנס שמך כאן]',
-        ...CATEGORIES.map(() => '')
     ]);
-    const legend = [
-        [],
-        ['--- מקרא ניקוד ---'],
-        ['1', 'גרוע מאוד'],
-        ['2', 'גרוע'],
-        ['3', 'חלש'],
-        ['4', 'מתחת לממוצע'],
-        ['5', 'ממוצע'],
-        ['6', 'מעל ממוצע'],
-        ['7', 'טוב'],
-        ['8', 'טוב מאוד'],
-        ['9', 'מצוין'],
-        ['10', 'מושלם'],
-    ];
-    const csv = [headers, ...rows, ...legend]
-        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(sep))
-        .join('\r\n');
-    // BOM for Excel Hebrew support
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+    hdr.height = 40;
+    hdr.eachCell(cell => {
+        cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0891B2' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border    = { bottom: { style: 'medium', color: { argb: 'FF0E7490' } } };
+    });
+
+    // ── Project rows ──
+    state.projects.forEach((p, i) => {
+        const row = ws.addRow([
+            p.name, p.team, '[הכנס שמך כאן]',
+            ...CATEGORIES.map(() => '')
+        ]);
+        row.height = 24;
+        const bg = i % 2 === 0 ? 'FFFDF8F0' : 'FFFEF3E8';
+        row.eachCell((cell, col) => {
+            cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+            cell.alignment = { vertical: 'middle', horizontal: col > 3 ? 'center' : 'right' };
+            cell.border    = {
+                top:    { style: 'thin', color: { argb: 'FFE2D9CF' } },
+                bottom: { style: 'thin', color: { argb: 'FFE2D9CF' } },
+                left:   { style: 'thin', color: { argb: 'FFE2D9CF' } },
+                right:  { style: 'thin', color: { argb: 'FFE2D9CF' } }
+            };
+            if (col > 3) {
+                cell.dataValidation = {
+                    type: 'whole', operator: 'between', formulae: [1, 10],
+                    showErrorMessage: true,
+                    errorTitle: 'ניקוד לא תקין', error: 'יש להכניס מספר בין 1 ל-10',
+                    showInputMessage: true,
+                    promptTitle: 'ניקוד', prompt: '1 = גרוע מאוד  ·  10 = מושלם'
+                };
+            }
+        });
+    });
+
+    // ── Separator ──
+    ws.addRow([]);
+
+    // ── Legend title ──
+    const ltRow = ws.addRow(['מקרא ניקוד']);
+    ltRow.height = 26;
+    const ltCell = ltRow.getCell(1);
+    ltCell.font      = { bold: true, size: 12, color: { argb: 'FF0E7490' } };
+    ltCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+    ltCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    ltCell.border    = { bottom: { style: 'medium', color: { argb: 'FF0891B2' } } };
+
+    // ── Legend rows ──
+    [
+        [1,'גרוע מאוד'], [2,'גרוע'], [3,'חלש'], [4,'מתחת לממוצע'],
+        [5,'ממוצע'], [6,'מעל ממוצע'], [7,'טוב'], [8,'טוב מאוד'],
+        [9,'מצוין'], [10,'מושלם']
+    ].forEach(([score, label]) => {
+        const row = ws.addRow([score, label]);
+        row.height = 20;
+        row.getCell(1).font      = { bold: true };
+        row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+        row.getCell(2).alignment = { horizontal: 'right',  vertical: 'middle' };
+    });
+
+    const buf  = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'hackathon-template.csv';
+    a.download = 'hackathon-template.xlsx';
     a.click();
     URL.revokeObjectURL(url);
     toast('📥 התבנית הורדה');
 }
 
-function importJudgeCSV(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const rows = parseCSV(e.target.result);
-            if (rows.length < 2) { toast('⚠️ הקובץ ריק', 'err'); return; }
+function processJudgeRows(rows) {
+    if (rows.length < 2) { toast('⚠️ הקובץ ריק', 'err'); return; }
 
-            // Judge name comes from column 2 of first data row
-            const judgeName = (rows[1][2] || '').trim();
-            if (!judgeName || judgeName === '[הכנס שמך כאן]') {
-                toast('⚠️ יש למלא שם שופט בעמודה "שם השופט"', 'err');
-                return;
-            }
-            if (state.judgeSubmissions.find(j => j.judgeName === judgeName)) {
-                toast(`⚠️ שופט "${judgeName}" כבר הועלה — מחק אותו תחילה`, 'err');
-                return;
-            }
+    const judgeName = (rows[1][2] || '').trim();
+    if (!judgeName || judgeName === '[הכנס שמך כאן]') {
+        toast('⚠️ יש למלא שם שופט בעמודה "שם השופט"', 'err');
+        return;
+    }
+    if (state.judgeSubmissions.find(j => j.judgeName === judgeName)) {
+        toast(`⚠️ שופט "${judgeName}" כבר הועלה — מחק אותו תחילה`, 'err');
+        return;
+    }
 
-            const projectScores = {};
-            let matched = 0;
+    const projectScores = {};
+    let matched = 0;
 
-            for (let i = 1; i < rows.length; i++) {
-                const row = rows[i];
-                const projName = (row[0] || '').trim();
-                if (!projName) continue;
-                const project = state.projects.find(p => p.name === projName);
-                if (!project) continue;
-                const scores = {};
-                CATEGORIES.forEach((cat, idx) => {
-                    const v = parseFloat(row[3 + idx]);
-                    if (!isNaN(v)) scores[cat.id] = Math.min(10, Math.max(1, v));
-                });
-                if (Object.keys(scores).length > 0) {
-                    projectScores[project.id] = scores;
-                    matched++;
-                }
-            }
-
-            if (matched === 0) {
-                toast('⚠️ לא נמצאו ציונים תקינים — בדוק שמות פרויקטים', 'err');
-                return;
-            }
-
-            state.judgeSubmissions.push({
-                id: 'j' + Date.now(),
-                judgeName,
-                uploadedAt: new Date().toISOString(),
-                projectScores
-            });
-
-            save();
-            renderJudgesView();
-            renderLeaderboard();
-            toast(`✅ ציוני "${judgeName}" יובאו (${matched} פרויקטים)`);
-        } catch (_) {
-            toast('⚠️ שגיאה בקריאת הקובץ', 'err');
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const projName = (row[0] || '').trim();
+        if (!projName) continue;
+        const project = state.projects.find(p => p.name === projName);
+        if (!project) continue;
+        const scores = {};
+        CATEGORIES.forEach((cat, idx) => {
+            const v = parseFloat(row[3 + idx]);
+            if (!isNaN(v)) scores[cat.id] = Math.min(10, Math.max(1, v));
+        });
+        if (Object.keys(scores).length > 0) {
+            projectScores[project.id] = scores;
+            matched++;
         }
-    };
-    reader.readAsText(file, 'UTF-8');
+    }
+
+    if (matched === 0) {
+        toast('⚠️ לא נמצאו ציונים תקינים — בדוק שמות פרויקטים', 'err');
+        return;
+    }
+
+    state.judgeSubmissions.push({
+        id: 'j' + Date.now(),
+        judgeName,
+        uploadedAt: new Date().toISOString(),
+        projectScores
+    });
+
+    save();
+    renderJudgesView();
+    renderLeaderboard();
+    toast(`✅ ציוני "${judgeName}" יובאו (${matched} פרויקטים)`);
+}
+
+function importJudgeCSV(file) {
+    if (file.name.endsWith('.xlsx')) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(e.target.result);
+                const ws = wb.worksheets[0];
+                const rows = [];
+                ws.eachRow({ includeEmpty: false }, row => {
+                    rows.push(row.values.slice(1).map(v =>
+                        v === null || v === undefined ? '' : String(v)
+                    ));
+                });
+                processJudgeRows(rows);
+            } catch (_) {
+                toast('⚠️ שגיאה בקריאת הקובץ', 'err');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                processJudgeRows(parseCSV(e.target.result));
+            } catch (_) {
+                toast('⚠️ שגיאה בקריאת הקובץ', 'err');
+            }
+        };
+        reader.readAsText(file, 'UTF-8');
+    }
 }
 
 function removeJudge(id) {
