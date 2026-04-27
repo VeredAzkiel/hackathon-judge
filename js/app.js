@@ -789,7 +789,21 @@ function downloadTemplate() {
         p.name, p.team, '[הכנס שמך כאן]',
         ...CATEGORIES.map(() => '')
     ]);
-    const csv = [headers, ...rows]
+    const legend = [
+        [],
+        ['--- מקרא ניקוד ---'],
+        ['1', 'גרוע מאוד'],
+        ['2', 'גרוע'],
+        ['3', 'חלש'],
+        ['4', 'מתחת לממוצע'],
+        ['5', 'ממוצע'],
+        ['6', 'מעל ממוצע'],
+        ['7', 'טוב'],
+        ['8', 'טוב מאוד'],
+        ['9', 'מצוין'],
+        ['10', 'מושלם'],
+    ];
+    const csv = [headers, ...rows, ...legend]
         .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(sep))
         .join('\r\n');
     // BOM for Excel Hebrew support
