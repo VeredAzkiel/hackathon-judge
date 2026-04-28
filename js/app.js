@@ -1099,6 +1099,17 @@ document.getElementById('btn-export-projects').addEventListener('click', exportP
 document.getElementById('btn-podium').addEventListener('click', openPodium);
 document.getElementById('btn-download-template').addEventListener('click', downloadTemplate);
 
+document.getElementById('btn-reset-all').addEventListener('click', () => {
+    if (!confirm('האם אתה בטוחה? פעולה זו תמחק את כל הציונות וכל קבצי השופטים.')) return;
+    state.projects.forEach(p => { p.scores = {}; });
+    state.judgeSubmissions = [];
+    save();
+    renderJudgesView();
+    renderLeaderboard();
+    renderScoringView();
+    toast('✅ כל הציונות אופסו');
+});
+
 document.getElementById('csv-upload').addEventListener('change', function() {
     if (this.files && this.files[0]) {
         importJudgeCSV(this.files[0]);
