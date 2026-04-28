@@ -1031,13 +1031,15 @@ function renderJudgesView() {
 
     // ── Aggregated results table ──
     let tableHtml = '';
-    if (judgeCount > 0 && projectCount > 0) {
+    const hasManualScores = state.projects.some(p => p.scores && Object.keys(p.scores).length > 0);
+    if ((judgeCount > 0 || hasManualScores) && projectCount > 0) {
         const sortedProjects = state.projects
             .map(p => ({ ...p, _tot: calcTotal(getAggregatedScores(p)) }))
             .filter(p => p._tot !== null)
             .sort((a, b) => b._tot - a._tot);
 
         const catHeaders = CATEGORIES.map(c => `<th>${c.icon}<br><span>${c.name}</span></th>`).join('');
+        const manualHeader = hasManualScores ? `<th class="jth">✏️<br><span>ניקוד ידני</span></th>` : '';
         const judgeHeaders = state.judgeSubmissions.map(j => `<th class="jth">👨‍⚖️<br><span>${esc(j.judgeName)}</span></th>`).join('');
 
         const tableRows = sortedProjects.map((p, i) => {
@@ -1046,6 +1048,14 @@ function renderJudgesView() {
                 const v = eff && eff[c.id] !== undefined ? Number(eff[c.id]).toFixed(1) : '—';
                 return `<td class="${scoreClass(parseFloat(v))}">${v}</td>`;
             }).join('');
+
+            // Manual score cell
+            const manualCell = hasManualScores ? (() => {
+                const mTot = calcTotal(p.scores);
+                return mTot !== null
+                    ? `<td class="jcell ${scoreClass(mTot)}">${mTot.toFixed(1)}</td>`
+                    : `<td class="jcell jcell-miss">—</td>`;
+            })() : '';
 
             // Per-judge cells
             const judgeCells = state.judgeSubmissions.map(j => {
@@ -1060,6 +1070,7 @@ function renderJudgesView() {
                 <td class="agg-rank">${medal}</td>
                 <td class="agg-name"><strong>${esc(p.name)}</strong><br><span class="agg-team">${esc(p.team)}</span></td>
                 ${catCells}
+                ${manualCell}
                 ${judgeCells}
                 <td class="agg-total ${scoreClass(p._tot)}"><strong>${p._tot.toFixed(1)}</strong></td>
             </tr>`;
@@ -1075,6 +1086,7 @@ function renderJudgesView() {
                             <th></th>
                             <th>פרויקט</th>
                             ${catHeaders}
+                            ${manualHeader}
                             ${judgeHeaders}
                             <th class="agg-total-h">ממוצע</th>
                         </tr>
