@@ -219,9 +219,11 @@ function renderLeaderboard() {
     const total  = state.projects.length;
     const scored = state.projects.filter(isFullyScored).length;
 
+    const hasManualScores = state.projects.some(p => p.scores && Object.keys(p.scores).length > 0);
     const hasJudges = state.judgeSubmissions.length > 0;
-    const judgeNote = hasJudges
-        ? `<div class="stat-chip">📊 ממוצע <span>${state.judgeSubmissions.length}</span> שופטים</div>`
+    const sourceCount = state.judgeSubmissions.length + (hasManualScores ? 1 : 0);
+    const judgeNote = (hasJudges || hasManualScores)
+        ? `<div class="stat-chip">📊 ממוצע <span>${sourceCount}</span> מקורות ניקוד${hasManualScores ? ' (כולל ידני)' : ''}</div>`
         : '';
 
     statsEl.innerHTML =
