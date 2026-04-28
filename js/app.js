@@ -128,11 +128,20 @@ function isFullyScored(project) {
 // Returns averaged judge scores if judges submitted, else manual scores
 function getAggregatedScores(project) {
     const relevant = state.judgeSubmissions.filter(j => j.projectScores[project.id]);
+
+    // If no judge submissions, return manual scores only
     if (relevant.length === 0) return project.scores;
+
+    // Build list of all score sets: manual scores (if any) + judge submissions
+    const allSets = [];
+    const manualKeys = project.scores ? Object.keys(project.scores) : [];
+    if (manualKeys.length > 0) allSets.push(project.scores);
+    relevant.forEach(j => allSets.push(j.projectScores[project.id]));
+
     const averaged = {};
     for (const cat of CATEGORIES) {
-        const vals = relevant
-            .map(j => j.projectScores[project.id][cat.id])
+        const vals = allSets
+            .map(s => s[cat.id])
             .filter(v => v !== undefined && v !== null && !isNaN(v));
         if (vals.length > 0) averaged[cat.id] = vals.reduce((a, b) => a + b, 0) / vals.length;
     }
