@@ -75,5 +75,12 @@
     "team": "ליטל",
     "description": "מחברת ללימוד מקצועות שונים , כל עמוד מותאם למקצוע הנלמד וכולל בתוכו אפשרויות שונות ליצירת סיכומים ושיטות למידה שונות  וכן משחקים לשיפור חווית הלמידה",
     "createdAt": "2026-04-27T10:04:49.754Z"
+  },
+  {
+    "id": "p1777354920881",
+    "name": "Israeli holidays calendar",
+    "team": "אלכס",
+    "description": "The Calendar of Israeli holidays with descriptions. Ability to set notes for the days, short description of the holiday. User can print the whole Calendar or specific months",
+    "createdAt": "2026-04-28T05:42:00.881Z"
   }
 ]
