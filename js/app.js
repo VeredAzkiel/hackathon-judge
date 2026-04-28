@@ -1110,6 +1110,76 @@ document.getElementById('btn-export-projects').addEventListener('click', exportP
 document.getElementById('btn-podium').addEventListener('click', openPodium);
 document.getElementById('btn-download-template').addEventListener('click', downloadTemplate);
 
+document.getElementById('btn-export-scores').addEventListener('click', exportScoresXLSX);
+
+async function exportScoresXLSX() {
+    const scoredProjects = state.projects.filter(p => p.scores && Object.keys(p.scores).length > 0);
+    if (scoredProjects.length === 0) {
+        toast('⚠️ אין ציונות ידניים לייצא', 'err');
+        return;
+    }
+
+    const judgeName = 'אני (ניקוד ידני)';
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Hackathon Judge';
+    const ws = wb.addWorksheet('ניקוד שופטים', {
+        views: [{ state: 'frozen', xSplit: 0, ySplit: 1, rightToLeft: true }]
+    });
+
+    ws.columns = [
+        { key: 'name',  width: 34 },
+        { key: 'team',  width: 22 },
+        { key: 'judge', width: 24 },
+        ...CATEGORIES.map(c => ({ key: c.id, width: 20 }))
+    ];
+
+    const hdr = ws.addRow([
+        'שם הפרויקט', 'שם הקבוצה', 'שם השופט',
+        ...CATEGORIES.map(c => `${c.icon} ${c.name} (${c.weight}%)`)
+    ]);
+    hdr.height = 40;
+    hdr.eachCell(cell => {
+        cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0891B2' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border    = { bottom: { style: 'medium', color: { argb: 'FF0E7490' } } };
+    });
+
+    state.projects.forEach((p, i) => {
+        const scores = p.scores || {};
+        const row = ws.addRow([
+            p.name, p.team, judgeName,
+            ...CATEGORIES.map(c => scores[c.id] !== undefined ? scores[c.id] : '')
+        ]);
+        row.height = 24;
+        const bg = i % 2 === 0 ? 'FFFDF8F0' : 'FFFEF3E8';
+        row.eachCell((cell, col) => {
+            cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+            cell.alignment = { vertical: 'middle', horizontal: col > 3 ? 'center' : 'right' };
+            cell.border    = {
+                top:    { style: 'thin', color: { argb: 'FFE2D9CF' } },
+                bottom: { style: 'thin', color: { argb: 'FFE2D9CF' } },
+                left:   { style: 'thin', color: { argb: 'FFE2D9CF' } },
+                right:  { style: 'thin', color: { argb: 'FFE2D9CF' } }
+            };
+            // Highlight filled score cells in green
+            if (col > 3 && cell.value !== '') {
+                cell.font = { bold: true, color: { argb: 'FF065F46' } };
+            }
+        });
+    });
+
+    const buf  = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'my-scores.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('📄 ציונותייך יוצאו');
+}
+
 document.getElementById('btn-reset-all').addEventListener('click', () => {
     if (!confirm('האם אתה בטוחה? פעולה זו תמחק את כל הציונות וכל קבצי השופטים.')) return;
     state.projects.forEach(p => { p.scores = {}; });
